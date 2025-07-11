@@ -5,7 +5,12 @@ from dotenv import load_dotenv
 import os
 
 # Cargar variables desde .env
-load_dotenv()
+if os.getenv("FLASK_ENV") != "production":
+    try:
+        load_dotenv()
+    except ImportError:
+        print("⚠️ python-dotenv no está instalado. Si estás en producción, esto es normal.")
+
 
 # Leer la URL de la base de datos desde la variable de entorno
 DATABASE_URL = os.getenv("DATABASE_URL")
