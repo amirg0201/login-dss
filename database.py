@@ -1,9 +1,21 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.user import Base
+from dotenv import load_dotenv
+import os
 
-engine = create_engine('sqlite:///users.db', echo=True)
+# Cargar variables desde .env
+load_dotenv()
+
+# Leer la URL de la base de datos desde la variable de entorno
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("La variable de entorno DATABASE_URL no está definida.")
+
+# Crear motor y sesión
+engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
+# Crear las tablas si no existen
 def init_db():
     Base.metadata.create_all(bind=engine)

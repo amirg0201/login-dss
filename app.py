@@ -48,7 +48,12 @@ def login():
 def welcome():
     if 'usuario' not in session:
         return redirect(url_for('login'))
-    return render_template('welcome.html', usuario=session['usuario'])
+    db = SessionLocal()
+    user = db.query(Usuario).filter_by(username=session['usuario']).first()
+    db.close()
+
+    return render_template('welcome.html', usuario=user.username, rol=user.rol)
+
 
 @app.route('/logout')
 def logout():
