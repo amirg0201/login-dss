@@ -1,12 +1,12 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from models.user import Base
-from dotenv import load_dotenv
 import os
 
 # Cargar variables desde .env
 if os.getenv("FLASK_ENV") != "production":
     try:
+        from dotenv import load_dotenv
         load_dotenv()
     except ImportError:
         print("⚠️ python-dotenv no está instalado. Si estás en producción, esto es normal.")
