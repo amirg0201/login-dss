@@ -18,10 +18,11 @@ def register():
     if request.method == 'POST':
         user = request.form['username']
         pwd = request.form['password']
+        rol = request.form['rol']  
         if db.query(Usuario).filter_by(username=user).first():
             db.close()
             return 'Usuario ya registrado.'
-        nuevo = Usuario(username=user, password=pwd)
+        nuevo = Usuario(username=user, password=pwd, rol=rol)
         db.add(nuevo)
         db.commit()
         db.close()
@@ -39,6 +40,7 @@ def login():
         db.close()
         if registro:
             session['usuario'] = user
+            session['rol'] = registro.rol
             return redirect(url_for('welcome'))
         return 'Credenciales incorrectas'
     db.close()
@@ -50,9 +52,15 @@ def welcome():
         return redirect(url_for('login'))
     db = SessionLocal()
     user = db.query(Usuario).filter_by(username=session['usuario']).first()
+
+    usuarios = None
+    if session['rol'] == 'admin':
+        usuarios = db.query(Usuario).all()
+
     db.close()
 
-    return render_template('welcome.html', usuario=user.username, rol=user.rol)
+    return render_template('welcome.html', usuario=user.username, rol=user.rol, usuarios=usuarios)
+
 
 
 @app.route('/logout')

@@ -2,6 +2,11 @@
 <form method="post">
   Usuario: <input name="username"><br>
   Contraseña: <input name="password" type="password"><br>
+  <label>Rol:</label><br>
+  <select name="rol" required>
+    <option value="usuario">Usuario</option>
+    <option value="admin">Administrador</option>
+  </select><br><br>
   <button type="submit">Registrarse</button>
 </form>
 <a href="/login">Ya tengo cuenta</a>
