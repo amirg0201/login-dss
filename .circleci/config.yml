@@ -1,82 +1,97 @@
 # Versión de la API de CircleCI
 version: 2.1
 
-# 1. ORBS: Importamos el Orb oficial de Slack
+# 1. ORBS: Importamos el Orb oficial de Slack (esto no cambia)
 orbs:
-  slack: circleci/slack@4.12.5 # Usamos una versión específica del orb
+  slack: circleci/slack@4.12.5 
 
 # 2. JOBS: Definimos los trabajos individuales
 jobs:
   
-  # Job 1: Construir la aplicación
+  # Job 1: Construir el entorno virtual e instalar dependencias
   build:
     docker:
-      - image: cimg/node:18.18 # Usamos una imagen de Docker de Node.js
+      - image: cimg/python:3.11 # 👈 CAMBIO: Usamos una imagen de Python
     steps:
       - checkout # Clona el código del repositorio
-      - restore_cache: # Restaura la caché de node_modules (si existe)
+      - restore_cache: # Restaura la caché del venv (si existe)
           keys:
-            - v1-dependencies-{{ checksum "requirements.txt" }}
+            # La clave de caché se basa en el archivo de dependencias
+            - v1-dependencies-{{ checksum "requirements.txt" }} 
             - v1-dependencies- # Llave de fallback
       - run:
           name: Instalar dependencias
-          command: npm install
-      - save_cache: # Guarda la caché de node_modules
+          command: |
+            # Creamos un entorno virtual
+            python3 -m venv .venv
+            # Activamos el entorno virtual
+            . .venv/bin/activate
+            # Instalamos las dependencias
+            pip install -r requirements.txt
+      - save_cache: # Guarda la caché del venv
           paths:
-            - node_modules
+            - .venv # 👈 CAMBIO: Guardamos el entorno virtual
           key: v1-dependencies-{{ checksum "requirements.txt" }}
-      - persist_to_workspace: # Pasa los archivos (incl. node_modules) al siguiente job
+      - persist_to_workspace: # Pasa el venv y el código al siguiente job
           root: .
           paths:
-            - .
+            - . # Pasamos todo el directorio (incluyendo el .venv)
 
   # Job 2: Revisar el código (Linting)
   lint:
     docker:
-      - image: cimg/node:18.18
+      - image: cimg/python:3.11 # 👈 CAMBIO: Usamos una imagen de Python
     steps:
       - checkout
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies-{{ checksum "requirements.txt" }}
             - v1-dependencies-
       - run:
-          name: Instalar dependencias (si la caché falló)
-          command: npm install
+          name: Instalar dependencias
+          command: |
+            python3 -m venv .venv
+            . .venv/bin/activate
+            pip install -r requirements.txt
+            # Asumimos que flake8 está en requirements.txt o lo instalamos aquí
+            pip install flake8 
       - run:
-          name: Correr Linter
-          command: npm run lint # Asume que tienes un script "lint" en tu package.json
+          name: Correr Linter (Flake8)
+          command: |
+            . .venv/bin/activate
+            # 👈 CAMBIO: Usamos un linter de Python como flake8
+            flake8 . 
 
   # Job 3: Correr las pruebas
   test:
     docker:
-      - image: cimg/node:18.18
+      - image: cimg/python:3.11 # 👈 CAMBIO: Usamos una imagen de Python
     steps:
-      - attach_workspace: # Carga los archivos del job 'build' (no necesita npm install)
+      - attach_workspace: # Carga el código y el .venv del job 'build'
           at: .
       - run:
-          name: Correr Pruebas
-          command: npm test
+          name: Correr Pruebas (Pytest)
+          command: |
+            # Activamos el entorno virtual que recibimos
+            . .venv/bin/activate 
+            # 👈 CAMBIO: Usamos una herramienta de testing de Python como pytest
+            pytest 
       
-      # 3. NOTIFICACIONES (dentro del job 'test')
-      # El orb de Slack es inteligente. Solo se ejecutará si el "event" coincide.
+      # 3. NOTIFICACIONES (esto no cambia)
       - slack/notify:
-          event: pass # Notificar solo si el job 'test' pasa
+          event: pass 
           template: basic_success_1
       - slack/notify:
-          event: fail # Notificar solo si el job 'test' falla
+          event: fail 
           template: basic_fail_1
 
-# 4. WORKFLOWS: Orquestamos cómo se ejecutan los jobs
+# 4. WORKFLOWS: Orquestamos cómo se ejecutan los jobs (esto no cambia)
 workflows:
   version: 2
   build_lint_and_test_workflow:
     jobs:
-      # 'build' y 'lint' se ejecutan en paralelo
       - build
       - lint
-
-      # 'test' se ejecuta DESPUÉS de 'build'
       - test:
           requires:
-            - build # El job 'test' requiere que el job 'build' haya terminado
+            - build
