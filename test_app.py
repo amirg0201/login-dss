@@ -118,7 +118,7 @@ def test_login_and_welcome_page(client):
     assert response.status_code == 200
     # Asumimos que welcome.html muestra el nombre y rol
     assert b"welcomeuser" in response.data 
-    assert b"rol=user" in response.data
+    assert b"Tu rol es: user" in response.data
     
     # 4. Verificar que NO vemos la lista de admin
     assert b"usuarios=" not in response.data
@@ -145,7 +145,7 @@ def test_admin_sees_user_list(client):
     
     # 4. Verificar que el admin ve la bienvenida y su rol
     assert response.status_code == 200
-    assert b"rol=admin" in response.data
+    assert b"Tu rol es: admin" in response.data
     
     # 5. Verificar que el admin ve al "normaluser" en la lista
     # (Tu app pasa la variable 'usuarios' a la plantilla)
