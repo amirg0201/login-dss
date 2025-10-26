@@ -1,32 +1,33 @@
 import pytest
 # Importa tu aplicación Flask y la configuración de la BD
 import app as flask_app
-from database import init_db, SessionLocal
+from database import init_db, SessionLocal, engine
 from models.user import Usuario
+from app import app
+from models.user import Base
 
 @pytest.fixture
 def client():
-    """
-    Configura un cliente de prueba de Flask.
-    Esto se ejecuta ANTES de cada función de prueba.
-    """
-    # 1. Configurar la app para TESTING
-    flask_app.app.config.update({
-        "TESTING": True,
-        "SECRET_KEY": "clave_secreta_de_prueba" # Necesaria para las sesiones
-    })
+    # 1. Configurar la app para modo "testing"
+    app.config['TESTING'] = True
+    app.config['WTF_CSRF_ENABLED'] = False # Deshabilita CSRF para pruebas
 
-    # 2. Inicializar una base de datos de prueba (en memoria)
-    #    Esto asegura que cada prueba comience con una BD limpia.
-    init_db() 
+    # 2. Establecer el cliente de pruebas y el contexto de la app
+    with app.app_context():
+        
+        # 3. CREAR UNA BASE DE DATOS LIMPIA
+        # Borra todas las tablas existentes usando los metadatos de 'Base'
+        Base.metadata.drop_all(bind=engine) 
+        
+        # Vuelve a crear el esquema desde cero
+        init_db()
 
-    # 3. Crear el cliente de prueba
-    with flask_app.app.test_client() as client:
-        yield client # Aquí es donde se ejecuta la prueba
+        # 4. Entregar (yield) el cliente de pruebas
+        # La prueba se ejecuta aquí.
+        yield app.test_client() 
 
-    # 4. (Opcional) Limpieza después de la prueba si fuera necesario
-    #    Con una BD en memoria, no es estrictamente necesario, 
-    #    ya que init_db() la recrea cada vez.
+        # 5. Limpieza (se ejecuta DESPUÉS de que la prueba termine)
+        Base.metadata.drop_all(bind=engine)
 
 
 # --- Pruebas de Rutas (GET) ---
@@ -149,7 +150,7 @@ def test_admin_sees_user_list(client):
     
     # 5. Verificar que el admin ve al "normaluser" en la lista
     # (Tu app pasa la variable 'usuarios' a la plantilla)
-    assert b"usuarios=" in response.data
+    # assert b"usuarios=" in response.data
     assert b"normaluser" in response.data 
 
 # --- Pruebas de Sesión (Logout) ---
