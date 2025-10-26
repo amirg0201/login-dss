@@ -16,7 +16,7 @@ jobs:
       - checkout # Clona el código del repositorio
       - restore_cache: # Restaura la caché de node_modules (si existe)
           keys:
-            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies-{{ checksum "requirements.txt" }}
             - v1-dependencies- # Llave de fallback
       - run:
           name: Instalar dependencias
@@ -24,7 +24,7 @@ jobs:
       - save_cache: # Guarda la caché de node_modules
           paths:
             - node_modules
-          key: v1-dependencies-{{ checksum "package-lock.json" }}
+          key: v1-dependencies-{{ checksum "requirements.txt" }}
       - persist_to_workspace: # Pasa los archivos (incl. node_modules) al siguiente job
           root: .
           paths:
