@@ -6,7 +6,6 @@ app = Flask(__name__)
 app.secret_key = 'clave_secreta'
 
 # Base de datos en memoria
-init_db()
 
 @app.route('/')
 def index():
@@ -69,4 +68,5 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
+    init_db()
     app.run(debug=True)
