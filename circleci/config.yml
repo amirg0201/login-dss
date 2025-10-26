@@ -1,0 +1,82 @@
+# Versión de la API de CircleCI
+version: 2.1
+
+# 1. ORBS: Importamos el Orb oficial de Slack
+orbs:
+  slack: circleci/slack@4.12.5 # Usamos una versión específica del orb
+
+# 2. JOBS: Definimos los trabajos individuales
+jobs:
+  
+  # Job 1: Construir la aplicación
+  build:
+    docker:
+      - image: cimg/node:18.18 # Usamos una imagen de Docker de Node.js
+    steps:
+      - checkout # Clona el código del repositorio
+      - restore_cache: # Restaura la caché de node_modules (si existe)
+          keys:
+            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies- # Llave de fallback
+      - run:
+          name: Instalar dependencias
+          command: npm install
+      - save_cache: # Guarda la caché de node_modules
+          paths:
+            - node_modules
+          key: v1-dependencies-{{ checksum "package-lock.json" }}
+      - persist_to_workspace: # Pasa los archivos (incl. node_modules) al siguiente job
+          root: .
+          paths:
+            - .
+
+  # Job 2: Revisar el código (Linting)
+  lint:
+    docker:
+      - image: cimg/node:18.18
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies-
+      - run:
+          name: Instalar dependencias (si la caché falló)
+          command: npm install
+      - run:
+          name: Correr Linter
+          command: npm run lint # Asume que tienes un script "lint" en tu package.json
+
+  # Job 3: Correr las pruebas
+  test:
+    docker:
+      - image: cimg/node:18.18
+    steps:
+      - attach_workspace: # Carga los archivos del job 'build' (no necesita npm install)
+          at: .
+      - run:
+          name: Correr Pruebas
+          command: npm test
+      
+      # 3. NOTIFICACIONES (dentro del job 'test')
+      # El orb de Slack es inteligente. Solo se ejecutará si el "event" coincide.
+      - slack/notify:
+          event: pass # Notificar solo si el job 'test' pasa
+          template: basic_success_1
+      - slack/notify:
+          event: fail # Notificar solo si el job 'test' falla
+          template: basic_fail_1
+
+# 4. WORKFLOWS: Orquestamos cómo se ejecutan los jobs
+workflows:
+  version: 2
+  build_lint_and_test_workflow:
+    jobs:
+      # 'build' y 'lint' se ejecutan en paralelo
+      - build
+      - lint
+
+      # 'test' se ejecuta DESPUÉS de 'build'
+      - test:
+          requires:
+            - build # El job 'test' requiere que el job 'build' haya terminado
